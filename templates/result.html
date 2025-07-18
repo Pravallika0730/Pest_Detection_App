@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pest Detection Result</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(45deg, #70e1f5, #ffd194);
+            overflow: hidden;
+        }
+
+        /* Animation for background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 90%);
+            animation: moveBackground 20s linear infinite;
+        }
+
+        @keyframes moveBackground {
+            0% { transform: translate(-50%, -50%); }
+            100% { transform: translate(50%, 50%); }
+        }
+
+        .result-box {
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 10px;
+            padding: 20px;
+            width: 350px;
+            box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 2s ease-in-out;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .heading {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            font-size: 1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .result-title {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4caf50;
+            margin-bottom: 20px;
+        }
+
+        .language-select {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="result-box">
+        <div class="result-title">Pest Detection Result</div>
+
+        <!-- Language Selection -->
+        <div class="language-select">
+            <label for="language">Select Language: </label>
+            <select id="language" onchange="updateContent()">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="te">Telugu</option>
+            </select>
+        </div>
+
+        <div class="heading">Name:</div>
+        <div class="content" id="pest-name">{{ pest['name'] }}</div>
+        
+        <div class="heading">Damage:</div>
+        <div class="content" id="pest-damage">{{ pest['damage'] }}</div>
+        
+        <div class="heading">Control:</div>
+        <div class="content" id="pest-control">{{ pest['control'] }}</div>
+    </div>
+
+    <script>
+        const pestName = "{{ pest['name'] }}";
+
+        const pestData = {
+            'Aphid': {
+                'en': { 
+                    'damage': "Weakens plant by sucking sap, causing leaves to curl and distort.",
+                    'control': "Use insecticidal soap, neem oil, or introduce ladybugs to control them."
+                },
+                'hi': {
+                    'damage': "रस चूसकर पौधे को कमजोर करता है, जिससे पत्तियां मुड़ जाती हैं।",
+                    'control': "कीटनाशक साबुन, नीम का तेल या लेडीबग्स का उपयोग करें।"
+                },
+                'ta': {
+                    'damage': "சத்தை உறிஞ்சுவதால் தாவரத்தை பலவீனப்படுத்துகிறது.",
+                    'control': "பூச்சிகொல்லி சோப்பு, நீம் எண்ணெய் அல்லது லேடிபக்ஸை பயன்படுத்தவும்."
+                },
+                'te': {
+                    'damage': "రసం పీల్చి మొక్కను బలహీనపరుస్తుంది.",
+                    'control': "పురుగుమందు సబ్బు, వేపనూనె లేదా లేడీ బగ్స్ ఉపయోగించండి."
+                }
+            },
+            // Add other pests here following the same structure
+            'Armyworm': {
+    'en': {
+        'damage': "Chews on plant leaves, creating irregular holes and defoliating crops.",
+        'control': "Apply Bacillus thuringiensis (Bt) or neem oil to manage armyworm infestations."
+    },
+    'hi': {
+        'damage': "पत्तियों को चबाकर अनियमित छेद बनाता है।",
+        'control': "बीटी या नीम का तेल लगाएं।"
+    },
+    'ta': {
+        'damage': "இலைகளை தின்று இரையாக்குகிறது.",
+        'control': "பிடி அல்லது நீம் எண்ணெய் பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "ఆకులను తిని అసమానమైన రంధ్రాలు చేస్తుంది.",
+        'control': "బిటి లేదా వేపనూనెను ఉపయోగించండి."
+    }
+},
+'Beetle': {
+    'en': {
+        'damage': "Feeds on plant foliage and roots, causing holes in leaves and stunted growth.",
+        'control': "Use insecticidal soap, neem oil, or hand-pick beetles off plants."
+    },
+    'hi': {
+        'damage': "पत्तियों और जड़ों को खाता है, पत्तियों में छेद करता है।",
+        'control': "कीटनाशक साबुन, नीम का तेल या हाथ से बीटल्स हटाएं।"
+    },
+    'ta': {
+        'damage': "இலைகளையும் வேர்களையும் தின்று காயப்படுத்துகிறது.",
+        'control': "பூச்சிக்கொல்லி சோப்பு, நீம் எண்ணெய் பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "ఆకు మరియు వేర్లను తింటుంది.",
+        'control': "పురుగుమందు సబ్బు, వేపనూనె లేదా చేతితో బీటిల్స్ తొలగించండి."
+    }
+},
+'Bollworm': {
+    'en': {
+        'damage': "Feeds on cotton bolls and other crops, leading to reduced yield and damaged fruit.",
+        'control': "Apply biological control methods such as Bt or use insecticides."
+    },
+    'hi': {
+        'damage': "कपास के बीजकोष पर भोजन करता है।",
+        'control': "जैविक नियंत्रण या कीटनाशक उपयोग करें।"
+    },
+    'ta': {
+        'damage': "பருத்தி பொட்டுகளை உண்ணும்.",
+        'control': "பயிர் பாதுகாப்பு முறைகளை பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "పత్తి పై పూలను తింటుంది.",
+        'control': "బయోలాజికల్ కంట్రోల్ లేదా పురుగుమందులను వాడండి."
+    }
+},
+'Grasshopper': {
+    'en': {
+        'damage': "Consumes leaves, stems, and flowers, often causing significant crop loss.",
+        'control': "Use insecticides or introduce natural predators like birds."
+    },
+    'hi': {
+        'damage': "पत्तियों, तनों और फूलों को खाता है।",
+        'control': "कीटनाशक का उपयोग करें या प्राकृतिक शिकारी लाएं।"
+    },
+    'ta': {
+        'damage': "இலைகள், தண்டுகள், பூக்களை உண்ணும்.",
+        'control': "பூச்சிக்கொல்லிகள் அல்லது இயற்கை விரோதிகளை பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "ఆకులు, కొమ్మలు, పువ్వులను తింటుంది.",
+        'control': "పురుగుమందులు లేదా పక్షులు వంటి సహజ వైరుధ్యాలను ఉపయోగించండి."
+    }
+},
+'Mites': {
+    'en': {
+        'damage': "Sucks plant sap, causing leaves to yellow and dry out.",
+        'control': "Apply miticides or horticultural oils."
+    },
+    'hi': {
+        'damage': "रस चूसकर पत्तियों को पीला करता है।",
+        'control': "माइटिसाइड्स या बागवानी तेल लगाएं।"
+    },
+    'ta': {
+        'damage': "சத்தை உறிஞ்சுகிறது, இலைகள் மஞ்சளாகும்.",
+        'control': "மைடிசைட்கள் அல்லது தோட்ட எண்ணெய்கள் பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "రసం పీల్చి ఆకులను పసుపురంగు చేస్తుంది.",
+        'control': "మైటిసైడ్స్ లేదా ఉద్యాన తైలాలు వాడండి."
+    }
+},
+'Mosquito': {
+    'en': {
+        'damage': "Transmits diseases to humans and animals.",
+        'control': "Eliminate standing water and use repellents."
+    },
+    'hi': {
+        'damage': "मानव और पशुओं में बीमारियों का प्रसार करता है।",
+        'control': "ठहरे पानी को हटाएं और रिपेलेंट्स का उपयोग करें।"
+    },
+    'ta': {
+        'damage': "மனிதர் மற்றும் விலங்குகளுக்கு நோய் பரப்பும்.",
+        'control': "நிற்கும் நீரை நீக்கி, விரட்டிகளை பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "మానవులు మరియు జంతువులకు వ్యాధులను వ్యాప్తి చేస్తుంది.",
+        'control': "నిలిచిన నీటిని తొలగించండి మరియు రిపెలెంట్స్ వాడండి."
+    }
+},
+'Sawfly': {
+    'en': {
+        'damage': "Larvae feed on foliage, skeletonizing leaves.",
+        'control': "Use horticultural oil or insecticidal soap."
+    },
+    'hi': {
+        'damage': "लार्वा पत्तियों को खाता है।",
+        'control': "बागवानी तेल या कीटनाशक साबुन उपयोग करें।"
+    },
+    'ta': {
+        'damage': "இலைகளை தின்று சிதைக்கிறது.",
+        'control': "தோட்ட எண்ணெய் அல்லது பூச்சிக்கொல்லி சோப்பு பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "లార్వా ఆకులను తింటుంది.",
+        'control': "ఉద్యాన తైలము లేదా పురుగుమందు సబ్బు వాడండి."
+    }
+},
+'Stem Borer': {
+    'en': {
+        'damage': "Boars into stems, causing wilting and plant death.",
+        'control': "Use systemic insecticides or beneficial nematodes."
+    },
+    'hi': {
+        'damage': "तनों में छेद करता है, जिससे पौधा मुरझा जाता है।",
+        'control': "सिस्टमिक कीटनाशकों या लाभदायक निमेटोड्स का उपयोग करें।"
+    },
+    'ta': {
+        'damage': "தண்டுகளில் குழி போடுகிறது.",
+        'control': "அமைப்புக்கேற்ற பூச்சிக்கொல்லிகள் பயன்படுத்தவும்."
+    },
+    'te': {
+        'damage': "కొమ్మలలో రంధ్రాలు చేస్తుంది.",
+        'control': "సిస్టమిక్ పురుగుమందులు లేదా ప్రయోజనకర నేమటోడ్స్ వాడండి."
+    }
+}
+
+
+        };
+
+        function updateContent() {
+            const selectedLanguage = document.getElementById("language").value;
+            const pestInfo = pestData[pestName][selectedLanguage];
+
+            document.getElementById("pest-name").textContent = pestName;
+            document.getElementById("pest-damage").textContent = pestInfo.damage;
+            document.getElementById("pest-control").textContent = pestInfo.control;
+        }
+
+        // Initialize with the default language (English)
+        updateContent();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

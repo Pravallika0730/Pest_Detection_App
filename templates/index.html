@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Automated Pest Detection</title>
+    <style>
+        body {
+            font-family: "Arial", sans-serif;
+            background: linear-gradient(to right, #e0f7fa, #80deea);
+            margin: 0;
+            padding: 0;
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        header {
+            background-color: #4caf50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.5s;
+        }
+
+        header:hover {
+            background-color: #45a049;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        section {
+            margin: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        section:hover {
+            transform: scale(1.02);
+        }
+
+        footer {
+            background-color: #4caf50;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            bottom: 0;
+            width: 100%;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #language-selector {
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        #language {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            transition: border-color 0.3s;
+        }
+
+        #language:focus {
+            border-color: #4caf50;
+            outline: none;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        #voice-note-button {
+            background-color: #2196f3;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #voice-note-button:hover {
+            background-color: #1976d2;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Automated Pest Detection and Control</h1>
+        <!-- Language Switcher -->
+        <div id="language-selector">
+            <label for="language">Choose Language: </label>
+            <select id="language" onchange="switchLanguage()">
+                <option value="en">English</option>
+                <option value="te">Telugu</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+            </select>
+        </div>
+    </header>
+
+    <main>
+        <!-- Section: Introduction -->
+        <section id="introduction">
+            <h2 id="intro-title">Welcome to Our Pest Control Platform</h2>
+            <p id="intro-text">
+                This platform helps farmers detect and control pests in real-time,
+                reducing pesticide use.
+            </p>
+        </section>
+
+        <!-- Section: Pest Information with Control Measures -->
+        <section id="pests">
+            <h2 id="pest-info-title">
+                Detailed Pest Information and Control Measures
+            </h2>
+            <table id="pest-table">
+                <thead>
+                    <tr>
+                        <th>Pest</th>
+                        <th>Damage</th>
+                        <th>Control Measures</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Aphids</td>
+                        <td>Weakens plant by sucking sap.</td>
+                        <td>Neem oil, insecticidal soap, ladybugs.</td>
+                    </tr>
+                    <tr>
+                        <td>Whiteflies</td>
+                        <td>Yellowing of leaves due to sap feeding.</td>
+                        <td>Yellow sticky traps, neem oil.</td>
+                    </tr>
+                    <tr>
+                        <td>Bollworms</td>
+                        <td>Feeds on cotton bolls, reducing yield.</td>
+                        <td>Bt spray, hand-picking larvae.</td>
+                    </tr>
+                    <tr>
+                        <td>Fruit Flies</td>
+                        <td>Lay eggs in fruits, causing decay.</td>
+                        <td>Pheromone traps, remove affected fruits.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section: Upload Image for Detection -->
+        <section id="upload">
+            <h2 id="upload-title">Upload Pest Image for Detection</h2>
+            <form action="/" method="POST" enctype="multipart/form-data">
+                <label for="pestImage" id="upload-label">Select an image of the pest:</label>
+                <input
+                    type="file"
+                    id="pestImage"
+                    name="file"
+                    accept="image/*"
+                    required
+                    aria-label="Select an image of the pest"
+                />
+                <button type="submit" id="upload-button">Upload and Detect</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2024 Automated Pest Detection and Control. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Switch between languages
+        function switchLanguage() {
+            var language = document.getElementById("language").value;
+            if (language === "te") {
+                document.getElementById("intro-title").innerText =
+                    "మా పెస్ట్ కంట్రోల్ ప్లాట్‌ఫారమ్‌కు స్వాగతం";
+                document.getElementById("intro-text").innerText =
+                    "ఈ వేదిక రైతులను నేరుగా పురుగులను గుర్తించడంలో సహాయపడుతుంది.";
+                document.getElementById("pest-info-title").innerText =
+                    "భారతదేశంలో సాధారణ పురుగులు";
+                document.getElementById("upload-title").innerText =
+                    "పురుగు చిత్రాన్ని అప్‌లోడ్ చేయండి";
+            } else if (language === "hi") {
+                document.getElementById("intro-title").innerText =
+                    "हमारे पेस्ट कंट्रोल प्लेटफॉर्म में आपका स्वागत है";
+                document.getElementById("intro-text").innerText =
+                    "यह मंच किसानों को कीटों का पता लगाने और नियंत्रित करने में मदद करता है।";
+                document.getElementById("pest-info-title").innerText =
+                    "भारत में आम कीट";
+                document.getElementById("upload-title").innerText =
+                    "कीट छवि अपलोड करें";
+            } else if (language === "ta") {
+                document.getElementById("intro-title").innerText =
+                    "எங்கள் பூச்சி கட்டுப்பாட்டு தளத்திற்கு வரவேற்கிறோம்";
+                document.getElementById("intro-text").innerText =
+                    "இந்த தளம் விவசாயிகளை நேரடியாக பூச்சிகளை கண்டுபிடிக்க உதவுகிறது.";
+                document.getElementById("pest-info-title").innerText =
+                    "இந்தியாவில் பொதுவான பூச்சிகள்";
+                document.getElementById("upload-title").innerText =
+                    "பூச்சி படத்தை பதிவேற்றவும்";
+            } else {
+                document.getElementById("intro-title").innerText =
+                    "Welcome to Our Pest Control Platform";
+                document.getElementById("intro-text").innerText =
+                    "This platform helps farmers detect and control pests in real-time.";
+                document.getElementById("pest-info-title").innerText =
+                    "Common Pests in India";
+                document.getElementById("upload-title").innerText =
+                    "Upload Pest Image for Detection";
+            }
+        }
+    </script>
+</body>
+</html>
