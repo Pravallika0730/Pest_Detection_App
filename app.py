@@ -8,54 +8,55 @@ from tensorflow.keras.models import load_model
 
 app = Flask(__name__)
 
-# --- Config ---
-UPLOAD_FOLDER = 'upload'
-MODEL_DIR = 'models'
+# --- Paths & config ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'upload')
+MODEL_DIR = os.path.join(BASE_DIR, 'models')
 MODEL_FILENAME = 'pest_model.keras'
 MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
-
-# GitHub Release asset URL (public)
 MODEL_URL = "https://github.com/Pravallika0730/Pest_Detection_App/releases/download/v1-model/pest_model.keras"
 
-# Limit uploads and allow only images
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB
 ALLOWED_EXT = {'png', 'jpg', 'jpeg'}
 
 img_height, img_width = 150, 150  # match training size
 
-# --- Helpers ---
 def allowed(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
 
 def ensure_dirs():
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(MODEL_DIR, exist_ok=True)
 
-def ensure_model():
-    """
-    Ensure the Keras model file exists on disk.
-    Downloads it once from the GitHub release if missing.
-    """
+def download_model_if_missing():
     ensure_dirs()
+    need = True
     if os.path.exists(MODEL_PATH):
-        print(f"Model already present at {MODEL_PATH}")
-        return
-    print("Downloading model from GitHub release...")
-    with requests.get(MODEL_URL, stream=True, allow_redirects=True) as r:
-        r.raise_for_status()
-        # download in 1 MB chunks
-        with open(MODEL_PATH, "wb") as f:
-            for chunk in r.iter_content(1024 * 1024):
-                if chunk:
-                    f.write(chunk)
-    print(f"Model downloaded to {MODEL_PATH}")
+        try:
+            size = os.path.getsize(MODEL_PATH)
+            print(f"Model file exists, size={size} bytes")
+            need = size < 1024  # treat tiny/0-byte file as invalid
+        except Exception as e:
+            print("Could not stat model file:", e)
+            need = True
+    if need:
+        print("Downloading model from GitHub release...")
+        with requests.get(MODEL_URL, stream=True, allow_redirects=True, timeout=300) as r:
+            r.raise_for_status()
+            with open(MODEL_PATH, "wb") as f:
+                for chunk in r.iter_content(1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Model downloaded to {MODEL_PATH} (size={os.path.getsize(MODEL_PATH)} bytes)")
 
-# Download (if needed) BEFORE loading the model
-ensure_model()
+download_model_if_missing()
 
-# Load pre-trained pest detection model once (warm load)
+# Load the model using an ABSOLUTE path
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 model = load_model(MODEL_PATH, compile=False)
+
 
 # --- Labels & info ---
 pest_dict = {
