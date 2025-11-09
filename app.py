@@ -84,4 +84,6 @@ def upload_file():
         return render_template('result.html', pest=pest_info)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    port = int(os.environ.get("PORT", 5000))  # platform gives PORT
+    app.run(host="0.0.0.0", port=port, debug=False)
