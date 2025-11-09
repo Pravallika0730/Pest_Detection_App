@@ -1,22 +1,63 @@
 import os
+import requests  # NEW: for downloading model at startup
 from flask import Flask, render_template, request
+from werkzeug.utils import secure_filename  # NEW: safer filenames
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
 app = Flask(__name__)
 
-# Path to store uploaded images
+# --- Config ---
 UPLOAD_FOLDER = 'upload'
+MODEL_DIR = 'models'
+MODEL_FILENAME = 'pest_model.keras'
+MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
+
+# GitHub Release asset URL (public)
+MODEL_URL = "https://github.com/Pravallika0730/Pest_Detection_App/releases/download/v1-model/pest_model.keras"
+
+# Limit uploads and allow only images
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB
+ALLOWED_EXT = {'png', 'jpg', 'jpeg'}
 
-# Load pre-trained pest detection model
-model = load_model('models/pest_model.keras', compile=False)  # Load the final model saved
+img_height, img_width = 150, 150  # match training size
 
-# Define image dimensions
-img_height, img_width = 150, 150  # Match the size used during training
+# --- Helpers ---
+def allowed(filename: str) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
 
-# Dictionary to map model output to pests and control measures
+def ensure_dirs():
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(MODEL_DIR, exist_ok=True)
+
+def ensure_model():
+    """
+    Ensure the Keras model file exists on disk.
+    Downloads it once from the GitHub release if missing.
+    """
+    ensure_dirs()
+    if os.path.exists(MODEL_PATH):
+        print(f"Model already present at {MODEL_PATH}")
+        return
+    print("Downloading model from GitHub release...")
+    with requests.get(MODEL_URL, stream=True, allow_redirects=True) as r:
+        r.raise_for_status()
+        # download in 1 MB chunks
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in r.iter_content(1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+    print(f"Model downloaded to {MODEL_PATH}")
+
+# Download (if needed) BEFORE loading the model
+ensure_model()
+
+# Load pre-trained pest detection model once (warm load)
+model = load_model(MODEL_PATH, compile=False)
+
+# --- Labels & info ---
 pest_dict = {
     0: {'name': 'Aphid', 'damage': 'Weakens plants by sucking sap, causing leaves to curl and distort.',
         'control': 'Use insecticidal soap, neem oil, or introduce ladybugs to control them.'},
@@ -38,52 +79,51 @@ pest_dict = {
         'control': 'Use appropriate insecticides or biological controls such as parasitic wasps.'}
 }
 
+# --- Routes ---
 @app.route('/')
 def home():
+    ensure_dirs()  # ensure upload dir exists
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    ensure_dirs()
+
     if 'pestImage' not in request.files:
-        return "No file part"
-    
+        return "No file part", 400
+
     file = request.files['pestImage']
-
     if file.filename == '':
-        return "No selected file"
-    
-    if file:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
+        return "No selected file", 400
 
-        # Load and preprocess the image
-        img = cv2.imread(filepath)
+    if not allowed(file.filename):
+        return "Unsupported file type. Please upload a PNG/JPG/JPEG image.", 400
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)   # Keras generators use RGB
+    # Save safely
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
 
-        # Resize the image to the input size the model expects
-        expected_size = (img_height, img_width)  # Use the same size as in training
-        img = cv2.resize(img, expected_size)
+    # Read & preprocess
+    img = cv2.imread(filepath)
+    if img is None:
+        return "Could not read image file.", 400
 
-        # Normalize the image
-        ##img = img / 255.0
-        img = img.astype("float32") / 255.0
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (img_height, img_width))
+    img = img.astype("float32") / 255.0
+    img = np.expand_dims(img, axis=0)
 
-        # Expand dimensions to match the input shape
-        img = np.expand_dims(img, axis=0)
+    # Predict
+    prediction = model.predict(img)
+    pest_type = int(np.argmax(prediction, axis=1)[0])
+    pest_info = pest_dict.get(pest_type, {'name': 'Unknown', 'damage': 'N/A', 'control': 'N/A'})
 
-        # Make prediction
-        prediction = model.predict(img)
-        pest_type = int(np.argmax(prediction, axis=1)[0])
-        #pest_type = np.argmax(prediction)
+    return render_template('result.html', pest=pest_info)
 
-        # Get pest info based on prediction
-        pest_info = pest_dict[pest_type]
-        print(pest_info)
-
-        return render_template('result.html', pest=pest_info)
-
+# --- Entrypoint ---
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    port = int(os.environ.get("PORT", 5000))  # platform gives PORT
+    # make sure folders exist and bind to platform port
+    ensure_dirs()
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
