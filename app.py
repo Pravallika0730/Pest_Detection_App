@@ -1,7 +1,8 @@
 import os
-import requests  # NEW: for downloading model at startup
+import time
+import requests
 from flask import Flask, render_template, request
-from werkzeug.utils import secure_filename  # NEW: safer filenames
+from werkzeug.utils import secure_filename  # still used if you decide to save uploads
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -45,7 +46,7 @@ def download_model_if_missing():
         with requests.get(MODEL_URL, stream=True, allow_redirects=True, timeout=300) as r:
             r.raise_for_status()
             with open(MODEL_PATH, "wb") as f:
-                for chunk in r.iter_content(1024 * 1024):
+                for chunk in r.iter_content(1024 * 1024):  # 1MB chunks
                     if chunk:
                         f.write(chunk)
         print(f"Model downloaded to {MODEL_PATH} (size={os.path.getsize(MODEL_PATH)} bytes)")
@@ -57,6 +58,12 @@ if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 model = load_model(MODEL_PATH, compile=False)
 
+# Warm up: remove first-request slowness
+def _warmup():
+    dummy = np.zeros((1, img_height, img_width, 3), dtype="float32")
+    _ = model.predict(dummy)
+    print("Model warmup complete.")
+_warmup()
 
 # --- Labels & info ---
 pest_dict = {
@@ -100,31 +107,36 @@ def upload_file():
     if not allowed(file.filename):
         return "Unsupported file type. Please upload a PNG/JPG/JPEG image.", 400
 
-    # Save safely
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+    t0 = time.time()
 
-    # Read & preprocess
-    img = cv2.imread(filepath)
+    # --- FAST: decode in memory (no disk I/O) ---
+    file_bytes = np.frombuffer(file.read(), np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)  # BGR
     if img is None:
         return "Could not read image file.", 400
+    t1 = time.time()
 
+    # Preprocess
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, (img_height, img_width))
     img = img.astype("float32") / 255.0
     img = np.expand_dims(img, axis=0)
+    t2 = time.time()
 
     # Predict
     prediction = model.predict(img)
+    t3 = time.time()
+
     pest_type = int(np.argmax(prediction, axis=1)[0])
     pest_info = pest_dict.get(pest_type, {'name': 'Unknown', 'damage': 'N/A', 'control': 'N/A'})
+
+    # Simple timing log in server output
+    print(f"decode={t1-t0:.3f}s preprocess={t2-t1:.3f}s predict={t3-t2:.3f}s total={t3-t0:.3f}s")
 
     return render_template('result.html', pest=pest_info)
 
 # --- Entrypoint ---
 if __name__ == '__main__':
-    # make sure folders exist and bind to platform port
     ensure_dirs()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
